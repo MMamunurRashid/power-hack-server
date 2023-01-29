@@ -48,6 +48,9 @@ const isAuth = (req, res, next) => {
 async function run() {
   try {
     const usersCollection = client.db("power-hack").collection("users");
+    const billingCollection = client.db("power-hack").collection("billing");
+
+    // authentication
     app.get("/registration", async (req, res) => {
       res.send({ registration: "/registration" });
     });
@@ -83,6 +86,58 @@ async function run() {
       }
       req.session.isAuth = true;
       res.redirect("/login");
+    });
+
+    // Billing
+
+    app.post("/add-billing", async (req, res) => {
+      const billing = req.body;
+      const result = await billingCollection.insertOne(billing);
+      res.send(result);
+    });
+
+    app.get("/billing-list", async (req, res) => {
+      const page = parseInt(req.query.page);
+      // console.log(page);
+      const query = {};
+      const options = {
+        sort: { billingDate: -1 },
+      };
+      const cursor = billingCollection.find(query, options);
+      const data = await cursor
+        .skip(page * 10)
+        .limit(10)
+        .toArray();
+      const count = await billingCollection.estimatedDocumentCount();
+      res.send({ count, data });
+    });
+
+    app.put("/update-billing/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const update = req.body;
+      const option = { upsert: true };
+      const updatedBill = {
+        $set: {
+          name: update.name,
+          email: update.email,
+          phone: update.phone,
+          paidAmount: update.paidAmount,
+        },
+      };
+      const result = await billingCollection.updateOne(
+        filter,
+        updatedBill,
+        option
+      );
+      res.send(result);
+    });
+
+    app.delete("/delete-billing/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await billingCollection.deleteOne(query);
+      res.send(result);
     });
   } finally {
   }
