@@ -98,12 +98,22 @@ async function run() {
 
     app.get("/billing-list", async (req, res) => {
       const page = parseInt(req.query.page);
-      // console.log(page);
-      const query = {};
-      const options = {
-        sort: { billingDate: -1 },
-      };
-      const cursor = billingCollection.find(query, options);
+      console.log(req.query);
+      let query = {};
+      const search = req.query.search;
+      console.log(search);
+      if (search.length) {
+        query = {
+          $text: {
+            $search: search,
+          },
+        };
+      }
+      // const options = {
+      //   sort: { billingDate: -1 },
+      // };
+      // const cursor = billingCollection.find(query, options);
+      const cursor = billingCollection.find(query).sort({ billingDate: -1 });
       const data = await cursor
         .skip(page * 10)
         .limit(10)
